@@ -56,7 +56,7 @@ func updateProduct(w http.ResponseWriter, r *http.Request) {
 
 	for i := range product {
 		if product[i].ID == id {
-			product[i] = updateProduct
+			updateProduct.ID = id
 			product[i] = updateProduct
 
 			w.Header().Set("Content-Type", "application/json")
@@ -95,6 +95,24 @@ func deleteProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	http.HandleFunc("/api/categories", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			GetCategories(w, r)
+		} else if r.Method == "POST" {
+			CreateCategory(w, r)
+		}
+	})
+
+	http.HandleFunc("/api/categories/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			GetCategoryById(w, r)
+		} else if r.Method == "PUT" {
+			UpdateCategory(w, r)
+		} else if r.Method == "DELETE" {
+			DeleteCategory(w, r)
+		}
+	})
+
 	http.HandleFunc("/api/product/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			getProductById(w, r)
