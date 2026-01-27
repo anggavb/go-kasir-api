@@ -9,6 +9,7 @@ import (
 	"kasir-api/services"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -20,10 +21,17 @@ type Config struct {
 
 func main() {
 	config := viper.New()
-	config.SetConfigFile(".env")
-	config.AddConfigPath(".")
-	_ = config.ReadInConfig()
 
+	// 1. ENV selalu dibaca
+	config.AutomaticEnv()
+
+	// 2. Optional: load .env untuk local
+	if _, err := os.Stat(".env"); err == nil {
+		config.SetConfigFile(".env")
+		if err := config.ReadInConfig(); err != nil {
+			log.Fatal(err)
+		}
+	}
 	c := Config{
 		Port:   config.GetString("PORT"),
 		DBConn: config.GetString("DB_CONNECTION"),
