@@ -3,98 +3,48 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"kasir-api/database"
+	"kasir-api/handlers"
+	"kasir-api/repositories"
+	"kasir-api/services"
+	"log"
 	"net/http"
-	"strconv"
-	"strings"
+
+	"github.com/spf13/viper"
 )
 
-type Product struct {
-	ID    int    `json:"id"`
-	Nama  string `json:"nama"`
-	Harga int    `json:"harga"`
-	Stock int    `json:"stock"`
-}
-
-var product = []Product{
-	{ID: 1, Nama: "Indomie Godog", Harga: 3500, Stock: 10},
-	{ID: 2, Nama: "Vit 1000ml", Harga: 3000, Stock: 40},
-}
-
-func getProductById(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/product/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	for _, p := range product {
-		if p.ID == id {
-			json.NewEncoder(w).Encode(p)
-			return
-		}
-	}
-
-	http.Error(w, "Product not found", http.StatusNotFound)
-}
-
-func updateProduct(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/product/")
-
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var updateProduct Product
-	err = json.NewDecoder(r.Body).Decode(&updateProduct)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	for i := range product {
-		if product[i].ID == id {
-			updateProduct.ID = id
-			product[i] = updateProduct
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(product)
-			return
-		}
-	}
-
-	http.Error(w, "Product not found", http.StatusNotFound)
-}
-
-func deleteProduct(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/product/")
-	id, err := strconv.Atoi(idStr)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	for i, p := range product {
-		if p.ID == id {
-			// bikin slice baru
-			product = append(product[:i], product[i+1:]...)
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "Product deleted",
-			})
-
-			return
-		}
-	}
-
-	http.Error(w, "Product not found", http.StatusNotFound)
+type Config struct {
+	Port   string `mapstructure:"PORT"`
+	DBConn string `mapstructure:"DB_CONNECTION"`
 }
 
 func main() {
+	config := viper.New()
+	config.SetConfigFile(".env")
+	config.AddConfigPath(".")
+	_ = config.ReadInConfig()
+
+	c := Config{
+		Port:   config.GetString("PORT"),
+		DBConn: config.GetString("DB_CONNECTION"),
+	}
+
+	// setup database
+	db, err := database.InitDB(c.DBConn)
+	if err != nil {
+		fmt.Println(config.Get("DB_CONNECTION"))
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	productRepo := repositories.NewProductRepository(db)
+	productService := services.NewProductService(productRepo)
+	productHandler := handlers.NewProductHandler(productService)
+
+	// setup routes
+	http.HandleFunc("/api/product", productHandler.HandleProducts)
+	http.HandleFunc("/api/product/", productHandler.HandleProductByID)
+
 	http.HandleFunc("/api/categories", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			GetCategories(w, r)
@@ -113,36 +63,6 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/api/product/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			getProductById(w, r)
-		} else if r.Method == "PUT" {
-			updateProduct(w, r)
-		} else if r.Method == "DELETE" {
-			deleteProduct(w, r)
-		}
-	})
-	http.HandleFunc("/api/product", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(product)
-		} else if r.Method == "POST" {
-			var newProduct Product
-			err := json.NewDecoder(r.Body).Decode(&newProduct)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			newProduct.ID = len(product) + 1
-			product = append(product, newProduct)
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusCreated) // 201
-			json.NewEncoder(w).Encode(newProduct)
-		}
-
-	})
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
@@ -152,7 +72,7 @@ func main() {
 	})
 	fmt.Println("Server running di localhost:8080")
 
-	err := http.ListenAndServe(":8080", nil)
+	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
 		fmt.Println("Gagal runing server")
 	}
