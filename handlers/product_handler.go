@@ -19,14 +19,15 @@ func NewProductHandler(service *services.ProductService) *ProductHandler {
 
 // HandleProducts - GET /api/produk
 func (h *ProductHandler) HandleProducts(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		h.GetAll(w, r)
-	case http.MethodPost:
-		h.Create(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+	http.Error(w, r.Method, http.StatusOK)
+	// switch r.Method {
+	// case http.MethodGet:
+	// 	h.GetAll(w, r)
+	// case http.MethodPost:
+	// 	h.Create(w, r)
+	// default:
+	// 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// }
 }
 
 func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
