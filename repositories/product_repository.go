@@ -15,7 +15,7 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 func (repo *ProductRepository) GetAll() ([]models.Product, error) {
-	query := "SELECT * FROM products"
+	query := "SELECT id, name, price, stock FROM products"
 	rows, err := repo.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (repo *ProductRepository) Create(product *models.Product) error {
 }
 
 func (repo *ProductRepository) GetByID(id int) (*models.Product, error) {
-	query := "SELECT * FROM products WHERE id=?"
+	query := "SELECT id, name, price, stock FROM products WHERE id=?"
 
 	var product models.Product
 	err := repo.db.QueryRow(query, id).Scan(&product.ID, &product.Name, &product.Price, &product.Stock)
