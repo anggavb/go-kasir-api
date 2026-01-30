@@ -1,0 +1,72 @@
+package repositories
+
+import (
+	"database/sql"
+	"kasir-api/models"
+)
+
+type CategoryRepository struct {
+	db *sql.DB
+}
+
+func NewCategoryRepository(db *sql.DB) *CategoryRepository {
+	return &CategoryRepository{db: db}
+}
+
+func (repo *CategoryRepository) GetAll() ([]models.Category, error) {
+	query := "SELECT id, name, description FROM categories"
+	rows, err := repo.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	categories := make([]models.Category, 0)
+	for rows.Next() {
+		var category models.Category
+		err = rows.Scan(&category.ID, &category.Name, &category.Description)
+		if err != nil {
+			return nil, err
+		}
+		categories = append(categories, category)
+	}
+	return categories, nil
+}
+
+func (repo *CategoryRepository) Create(category *models.Category) error {
+	query := "INSERT INTO categories (name, description) VALUES (?, ?)"
+	result, err := repo.db.Exec(query, category.Name, category.Description)
+	if err != nil {
+		return err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	category.ID = int(id)
+	return nil
+}
+
+func (repo *CategoryRepository) GetByID(id int) (*models.Category, error) {
+	query := "SELECT id, name, description FROM categories WHERE id=?"
+
+	var category models.Category
+	err := repo.db.QueryRow(query, id).Scan(&category.ID, &category.Name, &category.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	return &category, nil
+}
+
+func (repo *CategoryRepository) Update(category *models.Category) error {
+	query := "UPDATE categories SET name=?, description=? WHERE id=?"
+	_, err := repo.db.Exec(query, category.Name, category.Description, category.ID)
+	return err
+}
+
+func (repo *CategoryRepository) Delete(id int) error {
+	query := "DELETE FROM categories WHERE id=?"
+	_, err := repo.db.Exec(query, id)
+	return err
+}
