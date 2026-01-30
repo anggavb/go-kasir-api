@@ -76,7 +76,7 @@ func (repo *ProductRepository) Update(product *models.Product) error {
 }
 
 func (repo *ProductRepository) Delete(id int) error {
-	query := "DELETE FROM products WHERE id=?"
+	query := "DELETE FROM products WHERE id=$1"
 	result, err := repo.db.Exec(query, id)
 	if err != nil {
 		return err
