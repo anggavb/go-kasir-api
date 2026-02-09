@@ -8,5 +8,5 @@ type Product struct {
 	Price      int           `json:"price"`
 	Stock      int           `json:"stock"`
 	CategoryID sql.NullInt64 `json:"category_id"`
-	Category   Category
+	Category   *Category
 }
